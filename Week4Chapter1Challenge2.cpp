@@ -23,14 +23,49 @@
 
 #include <iostream>
 #include <limits.h>
+#include <vector>
 
 using namespace std;
 
 #define VERTEX_COUNT 4
 
+bool debug = false;
+
+void HandleInvalidInput()
+{
+    cout << "Invalid input" << endl;
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+}
+
+int GetValidInput(int max)
+{
+    int selection;
+
+    bool retry;
+
+    do
+    {
+        retry = false;
+
+        cin >> selection;
+
+        if (cin.fail() || selection < 0 || selection > max)
+        {
+            HandleInvalidInput();
+
+            retry = true;
+        }
+    } while (retry);
+
+    cout << endl;
+
+    return selection;
+}
+
 int GetMinimumDistance(int distance[], bool sptSet[])
 {
-    cout << "Getting minimum distance..." << endl;
+    if(debug) cout << "Getting minimum distance..." << endl;
 
     int minimum = INT_MAX;
     int minimumIndex = 0;
@@ -44,18 +79,27 @@ int GetMinimumDistance(int distance[], bool sptSet[])
         }
     }
 
-    cout << "Minimum: " << minimum << ", index: " << minimumIndex << endl << endl;
+    if (debug) cout << "Minimum: " << minimum << ", index: " << minimumIndex << endl << endl;
 
     return minimumIndex;
 }
 
-void DisplayDistances(int distance[])
+void DisplayDistances(int distance[], int source, int goal)
 {
-    cout << "Vertex, Distance from Source" << endl;
+    //cout << "Vertex, Distance from Source" << endl;
 
-    for (int i = 0; i < VERTEX_COUNT; i++)
+    //for (int i = 0; i < VERTEX_COUNT; i++)
+    //{
+    //    cout << i << ", " << distance[i] << endl;
+    //}
+
+    if (distance[goal] == INT_MAX)
     {
-        cout << i << ", " << distance[i] << endl;
+        cout << "No path found.";
+    }
+    else
+    {
+        cout << "Distance from " << source << " to " << goal << " is " << distance[goal];
     }
 
     cout << endl;
@@ -67,7 +111,7 @@ void DisplayDistances(int distance[])
 */
 void InitializeSets(int distance[VERTEX_COUNT], bool sptSet[VERTEX_COUNT])
 {
-    cout << "Initializing sets.." << endl << endl;
+    if (debug) cout << "Initializing sets.." << endl << endl;
 
     for (int i = 0; i < VERTEX_COUNT; i++)
     {
@@ -80,12 +124,17 @@ bool IsNewDistanceSmaller(int u, int v, int vertexGraph[VERTEX_COUNT][VERTEX_COU
     int distance[VERTEX_COUNT],
     bool sptSet[VERTEX_COUNT])
 {
-    cout << "Is new distance smaller?" << endl;
-    cout << "sptSet[v]: " << sptSet[v] << ", ";
-    cout << "vertexGraph[u][v]: " << vertexGraph[u][v] << ", ";
-    cout << "distance[u]: " << distance[u] << ", ";
-    cout << "distance[v]: " << distance[v] << endl << endl;
+    if (debug)
+    {
+        cout << "Is new distance smaller?" << endl;
+        cout << "sptSet[v]: " << sptSet[v] << ", ";
+        cout << "vertexGraph[u][v]: " << vertexGraph[u][v] << ", ";
+        cout << "distance[u]: " << distance[u] << ", ";
+        cout << "distance[v]: " << distance[v] << endl << endl;
+    }
 
+    // return true if the path is not finalized, there is a connection, the connection is not MAX,
+    // and the new distance is shorter than the old distance
     return !sptSet[v] &&
         vertexGraph[u][v] &&
         distance[u] != INT_MAX &&
@@ -94,32 +143,36 @@ bool IsNewDistanceSmaller(int u, int v, int vertexGraph[VERTEX_COUNT][VERTEX_COU
 
 void FindShortestPath(int vertexGraph[VERTEX_COUNT][VERTEX_COUNT], 
                         int distance[VERTEX_COUNT], 
-                        bool sptSet[VERTEX_COUNT])
+                        bool sptSet[VERTEX_COUNT],
+                        int goal)
 {
     for (int count = 0; count < VERTEX_COUNT - 1; count++)
     {
         int u = GetMinimumDistance(distance, sptSet);
 
-        cout << "u = " << u << ", marking sptSet[u] to true" << endl;
+        if(debug) cout << "u = " << u << ", marking sptSet[u] to true" << endl;
 
         sptSet[u] = true;
 
-        cout << "Looping through vertices..." << endl << endl;
+        if (debug) cout << "Looping through vertices..." << endl << endl;
 
         for (int v = 0; v < VERTEX_COUNT; v++)
         {
-            cout << "Checking v: " << v << "..." << endl;
+            if (debug) cout << "Checking v: " << v << "..." << endl;
 
             if (IsNewDistanceSmaller(u, v, vertexGraph, distance, sptSet))
             {
-                cout << "Setting new distance: " << distance[u] + vertexGraph[u][v] << endl << endl;
+                if (debug) cout << "Setting new distance: " << distance[u] + vertexGraph[u][v] << endl << endl;
                 distance[v] = distance[u] + vertexGraph[u][v];
             }
         }
+
+        // break once this goal is completely processed
+        if (sptSet[goal] == true) return;
     }
 }
 
-void DijkstrasAlgorithm(int vertexGraph[VERTEX_COUNT][VERTEX_COUNT], int source)
+void DijkstrasAlgorithm(int vertexGraph[VERTEX_COUNT][VERTEX_COUNT], int source, int goal)
 {
     int distance[VERTEX_COUNT];
 
@@ -129,11 +182,11 @@ void DijkstrasAlgorithm(int vertexGraph[VERTEX_COUNT][VERTEX_COUNT], int source)
 
     distance[source] = 0;
 
-    cout << "dist[source] = 0" << endl << endl;
+    if (debug) cout << "dist[source] = 0" << endl << endl;
 
-    FindShortestPath(vertexGraph, distance, sptSet);
+    FindShortestPath(vertexGraph, distance, sptSet, goal);
 
-    DisplayDistances(distance);
+    DisplayDistances(distance, source, goal);
 }
 
 int main()
@@ -143,9 +196,26 @@ int main()
                                                         { 0, 1, 0, 1},
                                                         { 7, 0, 1, 0} };
 
+    //int vertexGraph[VERTEX_COUNT][VERTEX_COUNT] = { { 0, 0, 0, 0},
+    //                                                { 0, 0, 1, 0},
+    //                                                { 0, 1, 0, 1},
+    //                                                { 0, 0, 1, 0} };
+
+    // set this to where you would like to start
     int source = 0;
 
-    DijkstrasAlgorithm(vertexGraph, source);
+    cout << "Set the source: ";
+    source = GetValidInput(VERTEX_COUNT - 1);
+
+    int goal = 0;
+
+    cout << "Set the goal: ";
+    goal = GetValidInput(VERTEX_COUNT - 1);
+
+    cout << "Would you like debug logs? (0 = n, 1 = y): ";
+    debug = GetValidInput(1);
+
+    DijkstrasAlgorithm(vertexGraph, source, goal);
 
     return 0;
 }
